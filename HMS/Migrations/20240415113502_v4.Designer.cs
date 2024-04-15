@@ -4,6 +4,7 @@ using HMS.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HMS.Migrations
 {
     [DbContext(typeof(HMSContext))]
-    partial class HMSContextModelSnapshot : ModelSnapshot
+    [Migration("20240415113502_v4")]
+    partial class v4
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -46,29 +49,6 @@ namespace HMS.Migrations
                     b.HasIndex("Patient_ID");
 
                     b.ToTable("MedicalHistories");
-                });
-
-            modelBuilder.Entity("HMS.Models.Medicine", b =>
-                {
-                    b.Property<int>("Medicine_ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Medicine_ID"));
-
-                    b.Property<decimal>("M_Cost")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("M_Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("M_Quantity")
-                        .HasColumnType("int");
-
-                    b.HasKey("Medicine_ID");
-
-                    b.ToTable("Medicines");
                 });
 
             modelBuilder.Entity("HMS.Models.Patient", b =>
