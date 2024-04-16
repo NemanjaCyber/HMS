@@ -4,6 +4,7 @@ using HMS.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HMS.Migrations
 {
     [DbContext(typeof(HMSContext))]
-    partial class HMSContextModelSnapshot : ModelSnapshot
+    [Migration("20240416112704_v6")]
+    partial class v6
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -135,15 +138,18 @@ namespace HMS.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Prescription_ID"));
 
-                    b.Property<int?>("Assigned_PatientPatient_ID")
+                    b.Property<int?>("Asigned_To_PatientPatient_ID")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("Dosage")
+                        .HasColumnType("int");
+
                     b.HasKey("Prescription_ID");
 
-                    b.HasIndex("Assigned_PatientPatient_ID");
+                    b.HasIndex("Asigned_To_PatientPatient_ID");
 
                     b.ToTable("Prescriptions");
                 });
@@ -173,15 +179,15 @@ namespace HMS.Migrations
 
             modelBuilder.Entity("MedicinePrescription", b =>
                 {
-                    b.Property<int>("Assigned_MedicinesMedicine_ID")
+                    b.Property<int>("Asigned_PrescriptionsPrescription_ID")
                         .HasColumnType("int");
 
-                    b.Property<int>("Assigned_To_PrescriptionsPrescription_ID")
+                    b.Property<int>("Prescripted_MedicinesMedicine_ID")
                         .HasColumnType("int");
 
-                    b.HasKey("Assigned_MedicinesMedicine_ID", "Assigned_To_PrescriptionsPrescription_ID");
+                    b.HasKey("Asigned_PrescriptionsPrescription_ID", "Prescripted_MedicinesMedicine_ID");
 
-                    b.HasIndex("Assigned_To_PrescriptionsPrescription_ID");
+                    b.HasIndex("Prescripted_MedicinesMedicine_ID");
 
                     b.ToTable("MedicinePrescription");
                 });
@@ -206,26 +212,31 @@ namespace HMS.Migrations
 
             modelBuilder.Entity("HMS.Models.Prescription", b =>
                 {
-                    b.HasOne("HMS.Models.Patient", "Assigned_Patient")
-                        .WithMany()
-                        .HasForeignKey("Assigned_PatientPatient_ID");
+                    b.HasOne("HMS.Models.Patient", "Asigned_To_Patient")
+                        .WithMany("Patient_Prescriptions")
+                        .HasForeignKey("Asigned_To_PatientPatient_ID");
 
-                    b.Navigation("Assigned_Patient");
+                    b.Navigation("Asigned_To_Patient");
                 });
 
             modelBuilder.Entity("MedicinePrescription", b =>
                 {
-                    b.HasOne("HMS.Models.Medicine", null)
+                    b.HasOne("HMS.Models.Prescription", null)
                         .WithMany()
-                        .HasForeignKey("Assigned_MedicinesMedicine_ID")
+                        .HasForeignKey("Asigned_PrescriptionsPrescription_ID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("HMS.Models.Prescription", null)
+                    b.HasOne("HMS.Models.Medicine", null)
                         .WithMany()
-                        .HasForeignKey("Assigned_To_PrescriptionsPrescription_ID")
+                        .HasForeignKey("Prescripted_MedicinesMedicine_ID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("HMS.Models.Patient", b =>
+                {
+                    b.Navigation("Patient_Prescriptions");
                 });
 
             modelBuilder.Entity("HMS.Models.Room", b =>

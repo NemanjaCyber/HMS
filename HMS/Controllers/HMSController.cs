@@ -45,6 +45,7 @@ namespace HMS.Controllers
                 r.Room_Available_Beds--;
                 Context.Rooms!.Update(r);
                 await Context.SaveChangesAsync();
+
             }
             else
             {
@@ -53,51 +54,43 @@ namespace HMS.Controllers
 
             Context.Patients!.Add(p);
             await Context.SaveChangesAsync();
+
+            // Pozivanje druge za kreiranje kartona pri registraciji pacijenta u sistem
+            var prescriptionDate = DateTime.Now;
+            await CreatePrescriptionForPatient(p.Patient_ID, prescriptionDate);
+
             return Ok(p);
         }
 
-        [HttpGet("GetAllPatients")]
+        [HttpGet("GetAllPatientsWithAllData")]
         public async Task<ActionResult> GetAllPatients()
         {
             var podaci = await Context.Patients!
                 .Select(x => new
-            {
-                PatientFirstName = x.Patient_Fname,
-                PatientLastName = x.Patient_Lname,
-                PatientJMBG = x.JMBG,
-                PatientGender=x.Gender,
-                PatientBloodType = x.Blood_type,
-                PatientEmail = x.Email,
-                PatientPhone=x.Phone,
-                PatientCondition=x.Condition,
-                PatientAdmisionDate=x.Admision_Date
-            }).ToListAsync();
+                {
+                    PatientFirstName = x.Patient_Fname,
+                    PatientLastName = x.Patient_Lname,
+                    PatientJMBG = x.JMBG,
+                    PatientGender = x.Gender,
+                    PatientBloodType = x.Blood_type,
+                    PatientEmail = x.Email,
+                    PatientPhone = x.Phone,
+                    PatientCondition = x.Condition,
+                    PatientAdmisionDate = x.Admision_Date,
+                    PatientsPrescription = Context.Prescriptions!
+                .Where(t => t.Assigned_Patient == x)
+                .Select(y => new
+                {
+                    PrescriptionCreated = y.Date,
+                    PrescriptedMedicines=y.Assigned_Medicines!
+                    .Select(u => new
+                    {
+                        MedicineName=u.M_Name
+                    })
+                }).ToList()
+                }).ToListAsync();
 
             return Ok(podaci);
-        }
-
-        [HttpDelete("DeletePatient/{id}")]
-        public async Task<ActionResult> DeletePatient(int id)
-        {
-
-            var p=await Context.Patients!.Where(x=>x.Patient_ID==id).FirstOrDefaultAsync();
-
-            var mh=await Context.MedicalHistories!
-                .Where(x=>x.Patient_Id==p)
-                .FirstOrDefaultAsync();
-            Context.MedicalHistories!.Remove(mh);
-            await Context.SaveChangesAsync();
-
-            if(p==null)
-            {
-                return BadRequest("Pacijent sa unesenim ID-jem ne postoji");
-            }    
-            else
-            {
-                Context.Patients!.Remove(p);
-                await Context.SaveChangesAsync();
-                return Ok("Uklonjen pacijent sa Id-jem " +p.Patient_ID);
-            }
         }
 
         [HttpPost("AddMedicalHistory/{patientJMBG}")]
@@ -114,6 +107,21 @@ namespace HMS.Controllers
             Context.MedicalHistories!.Add(mh);
             await Context.SaveChangesAsync();
             return Ok("Dodate su moguce alergije i bolesti za pacijenta sa JMBG-om: " + patientJMBG);
+        }
+
+        [HttpGet("ReturnMedicalHistoryForPatient/{patientId}")]
+        public async Task<ActionResult> ReturnMedicalHistoryForPatient(int patientId)
+        {
+            var p=await Context.Patients!.Where(x=>x.Patient_ID==patientId).FirstOrDefaultAsync();
+            var podaci = await Context.MedicalHistories!
+                .Where(x => x.Patient_Id == p)
+                .Select(x => new
+                {
+                    PatientAlergies = x.Alergies,
+                    PatientPreConditions = x.Pre_Conditions
+                }).ToListAsync();
+
+            return Ok(podaci);
         }
 
         [HttpDelete("DischargePatient/{patientJMBG}")]
@@ -133,6 +141,14 @@ namespace HMS.Controllers
             if (mh != null)
             {
                 Context.MedicalHistories!.Remove(mh!);
+            }
+
+            var pres = await Context.Prescriptions!
+                .Where(x => x.Assigned_Patient == p)
+                .FirstOrDefaultAsync();
+            if (pres != null)
+            {
+                Context.Prescriptions!.Remove(pres!);
             }
 
             var r = await Context.Rooms!
@@ -197,6 +213,61 @@ namespace HMS.Controllers
                 }).ToListAsync();
 
             return Ok(podaci);
+        }
+
+        [HttpGet("ReturnAllMedicines")]
+        public async Task<ActionResult> ReturnAllMedicines()
+        {
+            var podaci = await Context.Medicines!
+                .Select(x => new
+                {
+                    MedicineName = x.M_Name,
+                    MedicineQuantity = x.M_Quantity,
+                    MedicineCost = x.M_Cost
+                }).ToListAsync();
+
+            return Ok(podaci);
+        }
+
+        [HttpPost("CreatePrescriptionForPatient/{patientId}/{date}")]
+        public async Task<ActionResult> CreatePrescriptionForPatient(int patientId, DateTime date)
+        {
+            var p = await Context.Patients!
+                .Where(x => x.Patient_ID == patientId)
+                .FirstOrDefaultAsync();
+
+            var pres = new Prescription();
+            pres.Date= date;
+            pres.Assigned_Patient = p;
+            Context.Prescriptions!.Add(pres);
+            await Context.SaveChangesAsync();
+            return Ok("Dodat je recept");
+        }
+
+        [HttpPut("AddMedicineToPrescription/{prescriptionId}/{medicineId}")]
+        public async Task<ActionResult> AddMedicineToPrescription(int prescriptionId, int medicineId)
+        {
+            var p = await Context.Prescriptions!
+                .Include(x => x.Assigned_Medicines)
+                .Where(x => x.Prescription_ID == prescriptionId)
+                .FirstOrDefaultAsync();
+            var m = await Context.Medicines!.Where(x => x.Medicine_ID == medicineId).FirstOrDefaultAsync();
+
+            if(m.M_Quantity<=0)
+            {
+                return BadRequest("Trazeni lek nije vise na stanju");
+            }
+            m.M_Quantity--;
+            Context.Medicines!.Update(m);
+
+            if(p.Assigned_Medicines!.Contains(m))
+            {
+                return BadRequest("Receptu je vec dodeljen odabrani lek.");
+            }
+
+            p.Assigned_Medicines.Add(m);
+            await Context.SaveChangesAsync();
+            return Ok("Uspesno je dodat lek na recept" + p);
         }
 
         //ne radi dobro

@@ -8,7 +8,7 @@ namespace HMS.Models
         public DbSet<MedicalHistory>? MedicalHistories { get; set; }
         public DbSet<Room>? Rooms { get; set; }
         public DbSet<Medicine>? Medicines { get; set; }
-
+        public DbSet<Prescription>? Prescriptions { get; set; }
         public HMSContext(DbContextOptions options) : base(options) { }
     }
 }
