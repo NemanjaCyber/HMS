@@ -77,15 +77,21 @@ namespace HMS.Controllers
                     PatientPhone = x.Phone,
                     PatientCondition = x.Condition,
                     PatientAdmisionDate = x.Admision_Date,
+                    PatientEmergencyContaxt = x.PatientsEmergencyContacts!.Select(x => new
+                    {
+                        EmergencyContaxtName = x.EmergencyContact_Name,
+                        EmergencyContactPhone = x.EmergencyContact_Phone,
+                        EmergencyContactRelation = x.EmergencyContact_Realtion
+                    }),
                     PatientsPrescription = Context.Prescriptions!
                 .Where(t => t.Assigned_Patient == x)
                 .Select(y => new
                 {
                     PrescriptionCreated = y.Date,
-                    PrescriptedMedicines=y.Assigned_Medicines!
+                    PrescriptedMedicines = y.Assigned_Medicines!
                     .Select(u => new
                     {
-                        MedicineName=u.M_Name
+                        MedicineName = u.M_Name
                     })
                 }).ToList()
                 }).ToListAsync();
@@ -149,6 +155,14 @@ namespace HMS.Controllers
             if (pres != null)
             {
                 Context.Prescriptions!.Remove(pres!);
+            }
+
+            var ec = await Context.EmergencyContacts!
+                .Where(x => x.RelatedPatient_Id == p)
+                .FirstOrDefaultAsync();
+            if (ec != null)
+            {
+                Context.EmergencyContacts!.Remove(ec!);
             }
 
             var r = await Context.Rooms!
@@ -268,6 +282,19 @@ namespace HMS.Controllers
             p.Assigned_Medicines.Add(m);
             await Context.SaveChangesAsync();
             return Ok("Uspesno je dodat lek na recept" + p);
+        }
+
+        [HttpPost("AddEmergencyContactForPatient/{patientId}")]
+        public async Task<ActionResult> AddEmergencyContactForPatient(int patientId, [FromBody] EmergencyContact ec)
+        {
+            var ecNew = new EmergencyContact();
+            ecNew.EmergencyContact_Name = ec.EmergencyContact_Name;
+            ecNew.EmergencyContact_Realtion = ec.EmergencyContact_Realtion;
+            ecNew.EmergencyContact_Phone = ec.EmergencyContact_Phone;
+            ecNew.RelatedPatient_Id = await Context.Patients!.Where(x => x.Patient_ID == patientId).FirstOrDefaultAsync();
+            Context.EmergencyContacts!.Add(ecNew);
+            await Context.SaveChangesAsync();
+            return Ok(ecNew);
         }
 
         //ne radi dobro

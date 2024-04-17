@@ -19,5 +19,6 @@ namespace HMS.Models
         public string Phone { get; set; }
         [JsonIgnore]
         public Room? Assigned_Room_Id { get; set; }
+        public List<EmergencyContact>? PatientsEmergencyContacts { get; set; }
     }
 }
