@@ -297,27 +297,105 @@ namespace HMS.Controllers
             return Ok(ecNew);
         }
 
-        //ne radi dobro
-        //[HttpPut("UpdateMedicalHistory/{patientJMBG}")]
-        //public async Task<ActionResult> UpdateMedicalHistory(string patientJMBG, [FromQuery] string? alergies = null, [FromQuery] string? preConditions = null)
-        //{
-        //    var p = Context.Patients!.Where(x => x.JMBG == patientJMBG).FirstOrDefault();
-        //    var mh = await Context.MedicalHistories!.Where(x => x.Patient_Id == p).FirstOrDefaultAsync();
+        [HttpPost("AddDoctor/{departmentId}")]
+        public async Task<ActionResult> AddDoctor([FromBody] Doctor doctor,int departmentId)
+        {
+            var doctorNew = new Doctor();
+            doctorNew.Doctor_DateJoining = doctor.Doctor_DateJoining;
+            doctorNew.Doctor_Lname = doctor.Doctor_Lname;
+            doctorNew.Doctor_Fname = doctor.Doctor_Fname;
+            doctorNew.Doctor_Email = doctor.Doctor_Email;
+            var d= await Context.Departments!.Where(x => x.Department_ID == departmentId).FirstOrDefaultAsync();
+            d!.Department_EmplCount++;
+            doctorNew.Doctor_Department_Id = d;
+            doctorNew.Doctor_Qualification = doctor.Doctor_Qualification;
+            doctorNew.Doctor_Specialization = doctor.Doctor_Specialization;
 
-        //    if(mh!.Alergies==null)
-        //    {
-        //        mh.Alergies = alergies ?? "Nema";
-        //    }
-        //    if (mh!.Pre_Conditions == null)
-        //    {
-        //        mh.Pre_Conditions = preConditions ?? "Nema";
-        //    }
+            Context.Doctors!.Add(doctorNew);
+            Context.Departments!.Update(d);
+            await Context.SaveChangesAsync();
+            return Ok("Dodat je novi doktor." + doctorNew.Doctor_Fname + doctorNew.Doctor_Lname);
+        }
 
-        //    Context.MedicalHistories!.Update(mh);
-        //    await Context.SaveChangesAsync();
-        //    return Ok("Azuriran je pacijent sa JMBG-om " + patientJMBG);
-        //}
+        [HttpPost("AddNurse/{departmentId}")]
+        public async Task<ActionResult> AddNurse([FromBody] Nurse nurse, int departmentId)
+        {
+            var nurseNew = new Nurse();
+            nurseNew.Nurse_DateJoining = nurse.Nurse_DateJoining;
+            nurseNew.Nurse_Lname = nurse.Nurse_Lname;
+            nurseNew.Nurse_Fname = nurse.Nurse_Fname;
+            nurseNew.Nurse_Email = nurse.Nurse_Email;
+            var d = await Context.Departments!.Where(x => x.Department_ID == departmentId).FirstOrDefaultAsync();
+            d!.Department_EmplCount++;
+            nurseNew.Nurse_Department_Id = d;
 
+            Context.Nurses!.Add(nurseNew);
+            Context.Departments!.Update(d);
+            await Context.SaveChangesAsync();
+            return Ok("Dodat/a je nova medicinska sestra/brat." + nurseNew.Nurse_Fname + nurseNew.Nurse_Lname);
+        }
 
+        [HttpGet("GetAllDepartmentsWithAllEmloyees")]
+        public async Task<ActionResult> GetAllDepartmentsWithAllEmployees()
+        {
+            var podaci = await Context.Departments!
+                .Include(x => x.Department_Doctors_Id)
+                .Include(y => y.Department_Nurses_Id)
+                .Select(z => new
+                {
+                    DepartmentName = z.Department_Name,
+                    DepartmentEmployeesCount = z.Department_EmplCount,
+                    DepartmentDoctors = z.Department_Doctors_Id!.Select(c => new
+                    {
+                        DoctorFirstName = c.Doctor_Fname,
+                        DoctorLastName = c.Doctor_Lname,
+                        DoctorDatejoining = c.Doctor_DateJoining,
+                        DoctorQualification = c.Doctor_Qualification,
+                        DoctorSpecialization = c.Doctor_Specialization,
+                        DoctorEmail = c.Doctor_Email
+                    }),
+                    DepartmentNurses = z.Department_Nurses_Id!.Select(v => new
+                    {
+                        NurseFirstName = v.Nurse_Fname,
+                        NurseLastName = v.Nurse_Lname,
+                        NurseDatejoining = v.Nurse_DateJoining,
+                        NurseEmail = v.Nurse_Email
+                    })
+                }).ToListAsync();
+
+            return Ok(podaci);
+        }
+
+        [HttpGet("GetEmployeesForDepartment/{departmentName}")]
+        public async Task<ActionResult> GetEmployeesForDepartment(string departmentName)
+        {
+            var podaci=await Context.Departments!
+                .Include(x=>x.Department_Nurses_Id)
+                .Include(x=>x.Department_Doctors_Id)
+                .Where(x=>x.Department_Name==departmentName)
+                .Select(z => new
+                {
+                    DepartmentName = z.Department_Name,
+                    DepartmentEmployeesCount = z.Department_EmplCount,
+                    DepartmentDoctors = z.Department_Doctors_Id!.Select(c => new
+                    {
+                        DoctorFirstName = c.Doctor_Fname,
+                        DoctorLastName = c.Doctor_Lname,
+                        DoctorDatejoining = c.Doctor_DateJoining,
+                        DoctorQualification = c.Doctor_Qualification,
+                        DoctorSpecialization = c.Doctor_Specialization,
+                        DoctorEmail = c.Doctor_Email
+                    }),
+                    DepartmentNurses = z.Department_Nurses_Id!.Select(v => new
+                    {
+                        NurseFirstName = v.Nurse_Fname,
+                        NurseLastName = v.Nurse_Lname,
+                        NurseDatejoining = v.Nurse_DateJoining,
+                        NurseEmail = v.Nurse_Email
+                    })
+                }).ToListAsync();
+
+            return Ok(podaci);
+        }
     }
 }
