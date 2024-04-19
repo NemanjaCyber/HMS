@@ -15,5 +15,6 @@ namespace HMS.Models
         public string? Doctor_Email { get; set; }
         [JsonIgnore]
         public Department? Doctor_Department_Id { get; set; }
+        public List<Appointment>? Doctor_Appointments_Id { get; set; }
     }
 }

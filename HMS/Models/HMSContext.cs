@@ -13,6 +13,7 @@ namespace HMS.Models
         public DbSet<Department>? Departments { get; set; }
         public DbSet<Nurse>? Nurses { get; set; }
         public DbSet<Doctor>? Doctors { get; set; }
+        public DbSet<Appointment>? Appointments { get; set; }
         public HMSContext(DbContextOptions options) : base(options) { }
     }
 }

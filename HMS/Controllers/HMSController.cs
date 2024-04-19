@@ -77,23 +77,31 @@ namespace HMS.Controllers
                     PatientPhone = x.Phone,
                     PatientCondition = x.Condition,
                     PatientAdmisionDate = x.Admision_Date,
-                    PatientEmergencyContaxt = x.PatientsEmergencyContacts!.Select(x => new
+                    PatientEmergencyContaxt = x.PatientsEmergencyContacts!
+                    .Select(x => new
                     {
                         EmergencyContaxtName = x.EmergencyContact_Name,
                         EmergencyContactPhone = x.EmergencyContact_Phone,
                         EmergencyContactRelation = x.EmergencyContact_Realtion
                     }),
-                    PatientsPrescription = Context.Prescriptions!
-                .Where(t => t.Assigned_Patient == x)
-                .Select(y => new
-                {
-                    PrescriptionCreated = y.Date,
-                    PrescriptedMedicines = y.Assigned_Medicines!
-                    .Select(u => new
+                    PatientAppointments=x.Patient_Appointments_Id!
+                    .Select(x => new
                     {
-                        MedicineName = u.M_Name
-                    })
-                }).ToList()
+                        AppointmentDate=x.Appointment_Date,
+                        AppointmentTime=x.Appointment_Time,
+                        AppointmentWithDoctor =$"{x.Appointment_With_Doctor!.Doctor_Fname} {x.Appointment_With_Doctor!.Doctor_Lname}"
+                    }),
+                    PatientsPrescription = Context.Prescriptions!
+                    .Where(t => t.Assigned_Patient == x)
+                    .Select(y => new
+                    {
+                        PrescriptionCreated = y.Date,
+                        PrescriptedMedicines = y.Assigned_Medicines!
+                        .Select(u => new
+                        {
+                            MedicineName = u.M_Name
+                        })
+                    }).ToList()
                 }).ToListAsync();
 
             return Ok(podaci);
@@ -396,6 +404,28 @@ namespace HMS.Controllers
                 }).ToListAsync();
 
             return Ok(podaci);
+        }
+
+        [HttpPost("AddAppointmentForPatientWithDoctor/{patientId}/{doctorId}/{date}/{time}")]//problem sa Date.. sranja 
+        public async Task<ActionResult> AddAppointmentForPatientWithDoctor(int patientId, int doctorId,DateOnly date, TimeOnly time)
+        {
+            var currentDateTime = DateTime.UtcNow;
+            DateTime appointmentDateTime = new DateTime(date.Year, date.Month, date.Day, time.Hour, time.Minute, time.Second);
+
+            if (appointmentDateTime.Date > currentDateTime.Date)
+            {
+                return Ok("Termin je validan.");
+            }
+
+            var a = new Appointment();
+            a.Appointment_Date = date;
+            a.Appointment_Time=time;
+            a.Appointment_With_Patient = await Context.Patients!.Where(x => x.Patient_ID == patientId).FirstOrDefaultAsync();
+            a.Appointment_With_Doctor = await Context.Doctors!.Where(x => x.Doctor_ID == doctorId).FirstOrDefaultAsync();
+
+            Context.Appointments!.Add(a);
+            await Context.SaveChangesAsync();
+            return Ok("Dodat je pregled");
         }
     }
 }
