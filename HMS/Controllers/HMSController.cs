@@ -173,6 +173,14 @@ namespace HMS.Controllers
                 Context.EmergencyContacts!.Remove(ec!);
             }
 
+            var ap = await Context.Appointments!
+                .Where(x => x.Appointment_With_Patient == p)
+                .FirstOrDefaultAsync();
+            if (ap != null)
+            {
+                Context.Appointments!.Remove(ap!);
+            }
+
             var r = await Context.Rooms!
                 .Where(x => x.Room_Patients!.Contains(p))
                 .FirstOrDefaultAsync();
@@ -407,25 +415,30 @@ namespace HMS.Controllers
         }
 
         [HttpPost("AddAppointmentForPatientWithDoctor/{patientId}/{doctorId}/{date}/{time}")]//problem sa Date.. sranja 
-        public async Task<ActionResult> AddAppointmentForPatientWithDoctor(int patientId, int doctorId,DateOnly date, TimeOnly time)
+        public async Task<ActionResult> AddAppointmentForPatientWithDoctor(int patientId, int doctorId,string date, string time)
         {
-            var currentDateTime = DateTime.UtcNow;
-            DateTime appointmentDateTime = new DateTime(date.Year, date.Month, date.Day, time.Hour, time.Minute, time.Second);
-
-            if (appointmentDateTime.Date > currentDateTime.Date)
-            {
-                return Ok("Termin je validan.");
-            }
-
+            
             var a = new Appointment();
-            a.Appointment_Date = date;
-            a.Appointment_Time=time;
+            a.Appointment_Date = DateOnly.Parse(date);
+            a.Appointment_Time=TimeOnly.Parse(time);
             a.Appointment_With_Patient = await Context.Patients!.Where(x => x.Patient_ID == patientId).FirstOrDefaultAsync();
             a.Appointment_With_Doctor = await Context.Doctors!.Where(x => x.Doctor_ID == doctorId).FirstOrDefaultAsync();
 
             Context.Appointments!.Add(a);
             await Context.SaveChangesAsync();
             return Ok("Dodat je pregled");
+        }
+
+        [HttpGet("CalculateCostOfStay/{patientId}/{dateOutt}")]
+        public async Task<ActionResult> CalculateCostOfStay(int patientId,string dateOutt)
+        {
+            var p = await Context.Patients!.Where(x => x.Patient_ID == patientId).Include(x=>x.Assigned_Room_Id).FirstOrDefaultAsync();
+            var dateIn = p!.Admision_Date.Date;
+            var dateOut = DateTime.Parse(dateOutt);
+            int daysStayed = (int)(dateOut - dateIn).TotalDays;
+            var roomCost = p.Assigned_Room_Id!.Room_Cost;
+            decimal totalCost = daysStayed * roomCost;
+            return Ok($"Cena boravka za pacijenta {p.Patient_Fname} {p.Patient_Lname} iznosi {totalCost}");
         }
     }
 }
